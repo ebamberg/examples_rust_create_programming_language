@@ -1,0 +1,27 @@
+
+// ~ followed B
+// | or
+// ()+ one or many
+// SOI EOI Start of input, End of Input
+// _{} Wrapper don't create a Node.
+
+// Programm is from start of input to end of input
+// _{} just logical don't create a Node
+Program = _{ SOI ~ Expr ~ EOI }
+
+Expr = { BinaryExpr | UnaryExpr | Term }
+
+Term = {Int | "(" ~ Expr ~ ")"}
+
+UnaryExpr = { Operator ~ Term }
+
+BinaryExpr = { (UnaryExpr | Term) ~ (Operator ~ Term)+ }
+
+Int = @{ ASCII_DIGIT+ }
+
+WHITESPACE= _{ " " | "\t" | "\r" | "\n" }
+
+Operator = { "+" | "-" }
+
+
+

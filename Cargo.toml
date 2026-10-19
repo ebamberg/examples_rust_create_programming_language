@@ -1,0 +1,9 @@
+[package]
+name = "simple_language_test"
+version = "0.1.0"
+edition = "2024"
+# rust-version = "1.98.1"
+
+[dependencies]
+pest = "2.9.4"
+pest_derive = "2.9.4"
