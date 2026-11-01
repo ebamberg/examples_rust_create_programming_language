@@ -8,7 +8,7 @@ struct MyLanguageParser;
 
 pub fn parse_source(
     source: &str,
-) -> Result<pest::iterators::Pairs<Rule>, pest::error::Error<Rule>> {
+) -> Result<pest::iterators::Pairs<'_, Rule>, pest::error::Error<Rule>> {
     MyLanguageParser::parse(Rule::Program, source)
 }
 
