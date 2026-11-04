@@ -1,11 +1,13 @@
 use crate::parser::Rule;
 use pest::error::Error;
 
+#[derive(Debug)]
 pub enum Operator {
     Plus,
     Minus,
 }
 
+#[derive(Debug)]
 pub enum Node {
     Int(i32),
     UnaryExpr {
