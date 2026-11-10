@@ -21,3 +21,8 @@ fn test_subtraction() {
 fn test_combined() {
     assert_eq!(eval("1 + 2 - 3"), 0);
 }
+
+#[test]
+fn test_multiplication_precedence() {
+    assert_eq!(eval("2+3*4"), 14);
+}

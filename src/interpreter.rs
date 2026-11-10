@@ -1,4 +1,4 @@
-use crate::ast::{Node, Operator};
+use crate::ast::{Node, Operator, Prefix};
 
 pub fn interpret(ast: Vec<Node>) -> () {
     ast.iter().map(eval).for_each(|result| println!("Result: {}", result));
@@ -7,11 +7,11 @@ pub fn interpret(ast: Vec<Node>) -> () {
 pub fn eval(node: &Node) -> i32 {
     match node {
         Node::Int(value) => *value,
-        Node::UnaryExpr { operator, operand } => {
+        Node::UnaryExpr { prefix, operand } => {
             let value = eval(operand);
-            match operator {
-                Operator::Plus => value,
-                Operator::Minus => -value,
+            match prefix {
+                Prefix::Plus => value,
+                Prefix::Minus => -value,
             }
         }
         Node::BinaryExpr { operator, left, right } => {
@@ -20,6 +20,8 @@ pub fn eval(node: &Node) -> i32 {
             match operator {
                 Operator::Plus => left_value + right_value,
                 Operator::Minus => left_value - right_value,
+                Operator::Divide => left_value / right_value,
+                Operator::Multiply => left_value * right_value,
             }
         }
     }

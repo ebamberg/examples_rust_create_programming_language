@@ -1,4 +1,4 @@
-use crate::ast::{Node,Operator};
+use crate::ast::{Node,Operator,Prefix};
 
 use inkwell::execution_engine::JitFunction;
 use inkwell::module::Module;
@@ -81,11 +81,11 @@ pub fn execute_jit(module: inkwell::module::Module) {
 fn eval<'ctx>(builder: &'ctx Builder, i32_type: &'ctx IntType, node: &Node) -> IntValue<'ctx> {
     match node {
         Node::Int(value) => i32_type.const_int(*value as u64, true),
-        Node::UnaryExpr { operator, operand } => {
+        Node::UnaryExpr { prefix, operand } => {
             let value = eval(builder, i32_type, operand);
-            match operator {
-                Operator::Plus => value,
-                Operator::Minus => value.const_neg(),
+            match prefix {
+                Prefix::Plus => value,
+                Prefix::Minus => value.const_neg(),
             }
         }
         Node::BinaryExpr { operator, left, right } => {
@@ -94,6 +94,8 @@ fn eval<'ctx>(builder: &'ctx Builder, i32_type: &'ctx IntType, node: &Node) -> I
             match operator {
                 Operator::Plus => builder.build_int_add(left_value, right_value, "add_result").unwrap(),
                 Operator::Minus => builder.build_int_sub(left_value, right_value, "sub_result").unwrap(),
+                Operator::Multiply => builder.build_int_mul(left_value, right_value, "mul_result").unwrap(),
+                Operator::Divide => builder.build_int_signed_div(left_value, right_value, "div_result").unwrap(),
             }
         }
     }

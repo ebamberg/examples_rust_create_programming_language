@@ -13,7 +13,7 @@ use compiler::{compile,execute_jit,print_intermediate_code};
 fn main() {
     println!("Simple Calculator parsing example!");
 
-    let source = "-1+(2-3)";
+    let source = "2+3*4";
     let parsed_source = parse_source(source).expect("Syntax Error");
     let ast_tree = from_parsed_pairs(parsed_source).expect("AST conversion failed");
     print_ast(&ast_tree);
