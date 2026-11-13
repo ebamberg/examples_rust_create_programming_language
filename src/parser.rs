@@ -78,6 +78,17 @@ mod tests {
     }
 
     #[test]
+    fn parses_expressions_with_empty_lines_between_them() {
+        let expressions: Vec<_> = parse_source("1+2;\n\n\n3*4")
+            .expect("empty lines between expressions should be accepted")
+            .filter(|pair| pair.as_rule() == Rule::Expr)
+            .map(|pair| pair.as_str().to_owned())
+            .collect();
+
+        assert_eq!(expressions, ["1+2", "3*4"]);
+    }
+
+    #[test]
     fn parses_positive_unary_integer() {
         assert_parse_tree(
             "+1",
