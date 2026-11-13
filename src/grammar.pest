@@ -7,7 +7,7 @@
 
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
 
-Program = _{ SOI ~ Expr ~ EOI }
+Program = _{ SOI ~ Expr ~ (";" ~ Expr)* ~ ";"? ~ EOI }
     Expr = { Additive }
         Additive = { Multiplicative ~ ((AddOperator ~ Multiplicative)*) }
             Multiplicative = { UnaryExpr ~ ((MulOperator ~ UnaryExpr)*) }

@@ -8,7 +8,7 @@ use inkwell::types::IntType;
 use inkwell::builder::Builder;
 
 
-const ENTRYPOINT_FN_NAME: &str = "jit";
+const ENTRYPOINT_FN_PREFIX: &str = "jit_";
 
 pub fn new_compiler_context() -> Context {
     // Placeholder for creating a new compiler context
@@ -37,17 +37,16 @@ pub fn compile<'ctx>(context: &'ctx Context, ast: Vec<Node>) -> Module<'ctx> {
     let i32_type = context.i32_type();
 
     let fn_entrypoint_interface = i32_type.fn_type(&[], false);
-    let fn_entrypoint = module.add_function(ENTRYPOINT_FN_NAME, fn_entrypoint_interface, None);
-    // entry:
-    let entry_basic_block = context.append_basic_block(fn_entrypoint, "entry");
-    // position builder at the end of the entry basic block to add commands there
-    builder.position_at_end(entry_basic_block);
+    for (index, node) in ast.iter().enumerate() {
+        let function_name = format!("{ENTRYPOINT_FN_PREFIX}{index}");
+        let fn_entrypoint =
+            module.add_function(&function_name, fn_entrypoint_interface, None);
+        let entry_basic_block = context.append_basic_block(fn_entrypoint, "entry");
+        builder.position_at_end(entry_basic_block);
 
-    //@TODO: multiple lines results in multiple ret statements, need to handle this better
-    ast.iter().map(|node| eval(&builder, &i32_type, node) ).for_each(|result| {
-        // ret i32 %result
+        let result = eval(&builder, &i32_type, node);
         builder.build_return(Some(&result)).unwrap();
-    });
+    }
 
     module
 }
@@ -60,22 +59,27 @@ pub fn print_intermediate_code(module: &Module<'_>) {
 }
 
 
-pub fn execute_jit(module: inkwell::module::Module) {
+pub fn execute_jit(module: inkwell::module::Module, expression_count: usize) -> Vec<i32> {
     // Placeholder for JIT execution logic
     println!("Executing JIT...");
 
     // create a JIT execution engine
     let execution_engine = module.create_jit_execution_engine(inkwell::OptimizationLevel::None).unwrap();
 
-    unsafe {
-        // get the function pointer for the add function
-        type EntryFn = unsafe extern "C" fn() -> i32;
-        let jit_entrypoint: JitFunction<EntryFn> = execution_engine.get_function(ENTRYPOINT_FN_NAME).unwrap();
-        // call the add function with sample arguments
-        let result = jit_entrypoint.call();
-        println!("Result of expression: {}", result);
+    let mut results = Vec::with_capacity(expression_count);
+    for index in 0..expression_count {
+        let function_name = format!("{ENTRYPOINT_FN_PREFIX}{index}");
+        unsafe {
+            type EntryFn = unsafe extern "C" fn() -> i32;
+            let jit_entrypoint: JitFunction<EntryFn> =
+                execution_engine.get_function(&function_name).unwrap();
+            let result = jit_entrypoint.call();
+            println!("Result of expression {}: {}", index + 1, result);
+            results.push(result);
+        }
     }
-    
+
+    results
 }
 
 fn eval<'ctx>(builder: &'ctx Builder, i32_type: &'ctx IntType, node: &Node) -> IntValue<'ctx> {

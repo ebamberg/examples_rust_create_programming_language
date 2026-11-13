@@ -67,6 +67,17 @@ mod tests {
     }
 
     #[test]
+    fn parses_semicolon_separated_expressions() {
+        let expressions: Vec<_> = parse_source("1+2;\n3*4")
+            .expect("semicolon-separated expressions should parse")
+            .filter(|pair| pair.as_rule() == Rule::Expr)
+            .map(|pair| pair.as_str().to_owned())
+            .collect();
+
+        assert_eq!(expressions, ["1+2", "3*4"]);
+    }
+
+    #[test]
     fn parses_positive_unary_integer() {
         assert_parse_tree(
             "+1",

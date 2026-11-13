@@ -20,10 +20,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     print_ast(&ast_tree);
     println!("{:#?}", ast_tree);
     //   interpreter::interpret(ast_tree);
+    let expression_count = ast_tree.len();
     let compiler_context = compiler::new_compiler_context();
     let module = compile(&compiler_context, ast_tree);
     print_intermediate_code(&module);
-    execute_jit(module);
+    execute_jit(module, expression_count);
 
     Ok(())
 }

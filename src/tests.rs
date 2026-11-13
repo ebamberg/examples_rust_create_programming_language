@@ -1,10 +1,10 @@
-use crate::{ast::from_parsed_pairs, interpreter, parser::parse_source};
+use crate::{ast::from_parsed_pairs, compiler, interpreter, parser::parse_source};
 use std::{ffi::OsString, fs, io::ErrorKind, path::PathBuf};
 
 #[test]
 fn reads_default_example_file() {
     let source = crate::read_source_from(None).expect("default example should be readable");
-    assert_eq!(source.trim(), "3*4+6/3");
+    assert_eq!(source.trim(), "3*4+6/3;\n10-4*2");
 }
 
 #[test]
@@ -12,7 +12,21 @@ fn reads_filename_from_argument() {
     let filename = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/testlang.lang");
     let source = crate::read_source_from(Some(filename.into_os_string()))
         .expect("argument filename should be readable");
-    assert_eq!(source.trim(), "3*4+6/3");
+    assert_eq!(source.trim(), "3*4+6/3;\n10-4*2");
+}
+
+#[test]
+fn default_program_executes_every_expression() {
+    let source = crate::read_source_from(None).expect("default example should be readable");
+    let parsed = parse_source(&source).expect("default example should parse");
+    let ast = from_parsed_pairs(parsed).expect("default example should convert to an AST");
+    let expression_count = ast.len();
+    let context = compiler::new_compiler_context();
+    let module = compiler::compile(&context, ast);
+
+    let results = compiler::execute_jit(module, expression_count);
+
+    assert_eq!(results, [14, 2]);
 }
 
 #[test]
