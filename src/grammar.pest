@@ -15,7 +15,7 @@ Program = _{ SOI ~ Stmt ~ (";" ~ Stmt)* ~ ";"? ~ EOI }
                 Additive = { Multiplicative ~ ((AddOperator ~ Multiplicative)*) }
                     Multiplicative = { UnaryExpr ~ ((MulOperator ~ UnaryExpr)*) }
                 UnaryExpr = { Prefix? ~ Primary }
-                Primary = { Int | "(" ~ Expr ~ ")" }
+                Primary = { Int | Identifier | "(" ~ Expr ~ ")" }
 
 
 // ******** Basic Types ***********

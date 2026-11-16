@@ -20,6 +20,7 @@ pub enum Prefix {
 #[derive(Debug)]
 pub enum Node {
     Int(i32),
+    Variable(String),
     Assignment {
         name: String,
         value: Box<Node>,
@@ -119,6 +120,7 @@ fn primary_to_ast(pair: pest::iterators::Pair<Rule>) -> Node {
             let first = pair.into_inner().next().unwrap();
             match first.as_rule() {
                 Rule::Int => int_to_ast(first),
+                Rule::Identifier => Node::Variable(first.as_str().to_owned()),
                 Rule::Expr => expr_to_ast(first),
                 unknown => panic!("Unknown primary: {:?}", unknown),
             }
@@ -181,6 +183,7 @@ fn print_node(node: &Node, node_prefix: &str, is_last: bool) {
     let branch = if is_last { "\\-- " } else { "|-- " };
     match node {
         Node::Int(value) => println!("{node_prefix}{branch}Int({value})"),
+        Node::Variable(name) => println!("{node_prefix}{branch}Variable({name})"),
         Node::Assignment { name, value } => {
             println!("{node_prefix}{branch}Assignment({name})");
             let child_prefix = format!("{node_prefix}{}   ", if is_last { "    " } else { "|" });

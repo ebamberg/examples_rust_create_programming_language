@@ -4,8 +4,10 @@ use inkwell::execution_engine::JitFunction;
 use inkwell::module::Module;
 use inkwell::context::Context;
 use inkwell::values::IntValue;
+use inkwell::values::PointerValue;
 use inkwell::types::IntType;
 use inkwell::builder::Builder;
+use std::collections::HashMap;
 
 
 const ENTRYPOINT_FN_PREFIX: &str = "jit_";
@@ -35,6 +37,7 @@ pub fn compile<'ctx>(context: &'ctx Context, ast: Vec<Node>) -> Module<'ctx> {
     // define i32 @add(i32 %x, i32 %y) {   
     // working with int32 type
     let i32_type = context.i32_type();
+    let mut variables = HashMap::new();
 
     let fn_entrypoint_interface = i32_type.fn_type(&[], false);
     for (index, node) in ast.iter().enumerate() {
@@ -44,7 +47,7 @@ pub fn compile<'ctx>(context: &'ctx Context, ast: Vec<Node>) -> Module<'ctx> {
         let entry_basic_block = context.append_basic_block(fn_entrypoint, "entry");
         builder.position_at_end(entry_basic_block);
 
-        let result = eval(&builder, &i32_type, node);
+        let result = eval(&builder, i32_type, node, &module, &mut variables);
         builder.build_return(Some(&result)).unwrap();
     }
 
@@ -82,20 +85,38 @@ pub fn execute_jit(module: inkwell::module::Module, expression_count: usize) -> 
     results
 }
 
-fn eval<'ctx>(builder: &'ctx Builder, i32_type: &'ctx IntType, node: &Node) -> IntValue<'ctx> {
+fn eval<'ctx>(
+    builder: &Builder<'ctx>,
+    i32_type: IntType<'ctx>,
+    node: &Node,
+    module: &Module<'ctx>,
+    variables: &mut HashMap<String, PointerValue<'ctx>>,
+) -> IntValue<'ctx> {
     match node {
         Node::Int(value) => i32_type.const_int(*value as u64, true),
-        Node::Assignment { value, .. } => eval(builder, i32_type, value),
+        Node::Variable(name) => {
+            let pointer = variable_pointer(module, i32_type, variables, name);
+            builder
+                .build_load(i32_type, pointer, "load_variable")
+                .unwrap()
+                .into_int_value()
+        }
+        Node::Assignment { name, value } => {
+            let result = eval(builder, i32_type, value, module, variables);
+            let pointer = variable_pointer(module, i32_type, variables, name);
+            builder.build_store(pointer, result).unwrap();
+            result
+        }
         Node::UnaryExpr { prefix, operand } => {
-            let value = eval(builder, i32_type, operand);
+            let value = eval(builder, i32_type, operand, module, variables);
             match prefix {
                 Prefix::Plus => value,
                 Prefix::Minus => value.const_neg(),
             }
         }
         Node::BinaryExpr { operator, left, right } => {
-            let left_value = eval(builder, i32_type,left);
-            let right_value = eval(builder, i32_type, right);
+            let left_value = eval(builder, i32_type, left, module, variables);
+            let right_value = eval(builder, i32_type, right, module, variables);
             match operator {
                 Operator::Plus => builder.build_int_add(left_value, right_value, "add_result").unwrap(),
                 Operator::Minus => builder.build_int_sub(left_value, right_value, "sub_result").unwrap(),
@@ -104,4 +125,17 @@ fn eval<'ctx>(builder: &'ctx Builder, i32_type: &'ctx IntType, node: &Node) -> I
             }
         }
     }
+}
+
+fn variable_pointer<'ctx>(
+    module: &Module<'ctx>,
+    i32_type: IntType<'ctx>,
+    variables: &mut HashMap<String, PointerValue<'ctx>>,
+    name: &str,
+) -> PointerValue<'ctx> {
+    *variables.entry(name.to_owned()).or_insert_with(|| {
+        let global = module.add_global(i32_type, None, name);
+        global.set_initializer(&i32_type.const_zero());
+        global.as_pointer_value()
+    })
 }

@@ -83,10 +83,19 @@ fn unreadable_file_returns_permission_denied() {
 
 fn eval(source: &str) -> i32 {
     let parsed = parse_source(source).expect("source should parse");
-    let mut ast = from_parsed_pairs(parsed).expect("AST conversion should succeed");
+    let ast = from_parsed_pairs(parsed).expect("AST conversion should succeed");
     assert_eq!(ast.len(), 1, "expected one expression");
     let mut scope = interpreter::Scope::default();
-    interpreter::eval(&ast.remove(0), &mut scope)
+    interpreter::eval(&ast[0], &mut scope)
+}
+
+fn eval_program(source: &str) -> Vec<i32> {
+    let parsed = parse_source(source).expect("source should parse");
+    let ast = from_parsed_pairs(parsed).expect("AST conversion should succeed");
+    let mut scope = interpreter::Scope::default();
+    ast.iter()
+        .map(|node| interpreter::eval(node, &mut scope))
+        .collect()
 }
 
 #[test]
@@ -122,4 +131,22 @@ fn parses_assignment_into_ast() {
         }
         node => panic!("expected assignment node, got {node:?}"),
     }
+}
+
+#[test]
+fn interpreter_resolves_variables_in_expressions_and_assignments() {
+    assert_eq!(eval_program("let a=3; let b=a*2; b+a"), [3, 6, 9]);
+}
+
+#[test]
+fn jit_resolves_variables_across_statements() {
+    let parsed = parse_source("let a=3; let b=a*2; b+a").expect("program should parse");
+    let ast = from_parsed_pairs(parsed).expect("program should convert to an AST");
+    let expression_count = ast.len();
+    let context = compiler::new_compiler_context();
+    let module = compiler::compile(&context, ast);
+
+    let results = compiler::execute_jit(module, expression_count);
+
+    assert_eq!(results, [3, 6, 9]);
 }

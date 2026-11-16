@@ -15,6 +15,10 @@ pub fn interpret(ast: Vec<Node>) -> () {
 pub fn eval(node: &Node, scope: &mut Scope) -> i32 {
     match node {
         Node::Int(value) => *value,
+        Node::Variable(name) => *scope
+            .variables
+            .get(name)
+            .unwrap_or_else(|| panic!("Undefined variable: {name}")),
         Node::Assignment { name, value } => {
             let result = eval(value, scope);
             scope.variables.insert(name.clone(), result);
