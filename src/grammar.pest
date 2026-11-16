@@ -7,13 +7,45 @@
 
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
 
-Program = _{ SOI ~ Expr ~ (";" ~ Expr)* ~ ";"? ~ EOI }
-    Expr = { Additive }
-        Additive = { Multiplicative ~ ((AddOperator ~ Multiplicative)*) }
-            Multiplicative = { UnaryExpr ~ ((MulOperator ~ UnaryExpr)*) }
-        UnaryExpr = { Prefix? ~ Primary }
-        Primary = { Int | "(" ~ Expr ~ ")" }
-            Int = @{ ASCII_DIGIT+ }
+Program = _{ SOI ~ Stmt ~ (";" ~ Stmt)* ~ ";"? ~ EOI }
+//    Stmt = { Function | Return | Assignment | Expr }
+    Stmt = _{ Assignment | Expr }
+        Expr = { Additive }
+            Comparison = { Additive ~ (CompOp ~ Additive)* }    // x < 10
+                Additive = { Multiplicative ~ ((AddOperator ~ Multiplicative)*) }
+                    Multiplicative = { UnaryExpr ~ ((MulOperator ~ UnaryExpr)*) }
+                UnaryExpr = { Prefix? ~ Primary }
+                Primary = { Int | "(" ~ Expr ~ ")" }
+
+
+// ******** Basic Types ***********
+Int = @{ ASCII_DIGIT+ }
+Bool = @{ "true" | "false" }   
+
+
+// Keywords
+KEYWORD = @{ "let" | "fn" | "if" | "else" | "while" | "true" | "false" | "return" }
+CompOp = { "<=" | ">=" | "<" | ">" | "==" | "!=" }
+
+
+// ******* Functions and Variables *************
+Identifier = @{ !KEYWORD ~ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+
+// Function = { "fn" ~ Identifier ~ "(" ~ Params? ~ ")" ~ Block }  // Example: fn add(a, b) { return a + b }
+
+// Variable assignment
+Assignment = { "let" ~ Identifier ~ "=" ~ Expr } // Example: let x = 42
+
+// Return statement
+// Return = { "return" ~ Expr } // Example: return x + 1
+
+
+// ***** Control flow ********
+
+// Conditional = { "if" ~ "(" ~ Expr ~ ")" ~ Block ~ "else" ~ Block }
+// WhileLoop = { "while" ~ "(" ~ Expr ~ ")" ~ Block }
+// Block of statements
+// Block = { "{" ~ Stmt* ~ "}" }
 
 AddOperator = { "+" | "-" }
 MulOperator = { "*" | "/" }

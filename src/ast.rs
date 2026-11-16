@@ -20,6 +20,10 @@ pub enum Prefix {
 #[derive(Debug)]
 pub enum Node {
     Int(i32),
+    Assignment {
+        name: String,
+        value: Box<Node>,
+    },
     UnaryExpr {
         prefix: Prefix,
         operand: Box<Node>,
@@ -37,6 +41,7 @@ pub fn from_parsed_pairs(pairs: pest::iterators::Pairs<Rule>) -> Result<Vec<Node
     for pair in pairs {
         match pair.as_rule() {
             Rule::Expr => ast.push(expr_to_ast(pair)),
+            Rule::Assignment => ast.push(assignment_to_ast(pair)),
             Rule::EOI => {}
             rule => {
                 return Err(Error::new_from_span(
@@ -50,6 +55,16 @@ pub fn from_parsed_pairs(pairs: pest::iterators::Pairs<Rule>) -> Result<Vec<Node
     }
 
     Ok(ast)
+}
+
+fn assignment_to_ast(pair: pest::iterators::Pair<Rule>) -> Node {
+    let mut inner = pair.into_inner();
+    let name = inner.next().unwrap().as_str().to_owned();
+    let value = expr_to_ast(inner.next().unwrap());
+    Node::Assignment {
+        name,
+        value: Box::new(value),
+    }
 }
 
 fn expr_to_ast(pair: pest::iterators::Pair<Rule>) -> Node {
@@ -166,6 +181,11 @@ fn print_node(node: &Node, node_prefix: &str, is_last: bool) {
     let branch = if is_last { "\\-- " } else { "|-- " };
     match node {
         Node::Int(value) => println!("{node_prefix}{branch}Int({value})"),
+        Node::Assignment { name, value } => {
+            println!("{node_prefix}{branch}Assignment({name})");
+            let child_prefix = format!("{node_prefix}{}   ", if is_last { "    " } else { "|" });
+            print_node(value, &child_prefix, true);
+        }
         Node::UnaryExpr { prefix, operand } => {
             println!("{node_prefix}{branch}UnaryExpr({})", prefix_name(prefix));
             let child_prefix = format!("{node_prefix}{}   ", if is_last { "    " } else { "|" });

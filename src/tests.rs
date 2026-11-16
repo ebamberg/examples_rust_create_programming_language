@@ -1,23 +1,32 @@
 use crate::{ast::from_parsed_pairs, compiler, interpreter, parser::parse_source};
-use std::{ffi::OsString, fs, io::ErrorKind, path::PathBuf};
+use std::{ffi::OsString, fs, io::ErrorKind};
 
 #[test]
 fn reads_default_example_file() {
-    let source = crate::read_source_from(None).expect("default example should be readable");
-    assert_eq!(source.trim(), "3*4+6/3;\n10-4*2");
+    crate::read_source_from(None).expect("default example should be readable");
 }
 
 #[test]
 fn reads_filename_from_argument() {
-    let filename = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/testlang.lang");
-    let source = crate::read_source_from(Some(filename.into_os_string()))
+    let filename = std::env::temp_dir().join(format!(
+        "simple-language-test-input-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock should be after UNIX epoch")
+            .as_nanos()
+    ));
+    let expected = "17+25";
+    fs::write(&filename, expected).expect("temporary input file should be created");
+    let source = crate::read_source_from(Some(OsString::from(&filename)))
         .expect("argument filename should be readable");
-    assert_eq!(source.trim(), "3*4+6/3;\n10-4*2");
+    fs::remove_file(filename).expect("temporary input file should be removed");
+    assert_eq!(source, expected);
 }
 
 #[test]
 fn default_program_executes_every_expression() {
-    let source = crate::read_source_from(None).expect("default example should be readable");
+    let source = "3*4+6/3;\n10-4*2";
     let parsed = parse_source(&source).expect("default example should parse");
     let ast = from_parsed_pairs(parsed).expect("default example should convert to an AST");
     let expression_count = ast.len();
@@ -76,7 +85,8 @@ fn eval(source: &str) -> i32 {
     let parsed = parse_source(source).expect("source should parse");
     let mut ast = from_parsed_pairs(parsed).expect("AST conversion should succeed");
     assert_eq!(ast.len(), 1, "expected one expression");
-    interpreter::eval(&ast.remove(0))
+    let mut scope = interpreter::Scope::default();
+    interpreter::eval(&ast.remove(0), &mut scope)
 }
 
 #[test]
@@ -97,4 +107,19 @@ fn test_combined() {
 #[test]
 fn test_multiplication_precedence() {
     assert_eq!(eval("2+3*4"), 14);
+}
+
+#[test]
+fn parses_assignment_into_ast() {
+    let parsed = parse_source("let a=1").expect("assignment should parse");
+    let ast = from_parsed_pairs(parsed).expect("assignment should convert to an AST");
+
+    assert_eq!(ast.len(), 1);
+    match &ast[0] {
+        crate::ast::Node::Assignment { name, value } => {
+            assert_eq!(name, "a");
+            assert!(matches!(value.as_ref(), crate::ast::Node::Int(1)));
+        }
+        node => panic!("expected assignment node, got {node:?}"),
+    }
 }

@@ -85,6 +85,7 @@ pub fn execute_jit(module: inkwell::module::Module, expression_count: usize) -> 
 fn eval<'ctx>(builder: &'ctx Builder, i32_type: &'ctx IntType, node: &Node) -> IntValue<'ctx> {
     match node {
         Node::Int(value) => i32_type.const_int(*value as u64, true),
+        Node::Assignment { value, .. } => eval(builder, i32_type, value),
         Node::UnaryExpr { prefix, operand } => {
             let value = eval(builder, i32_type, operand);
             match prefix {

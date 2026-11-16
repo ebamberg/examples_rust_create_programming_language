@@ -1,22 +1,35 @@
 use crate::ast::{Node, Operator, Prefix};
 
-pub fn interpret(ast: Vec<Node>) -> () {
-    ast.iter().map(eval).for_each(|result| println!("Result: {}", result));
+
+use std::collections::HashMap;
+#[derive(Default)]
+pub struct Scope {
+    variables: HashMap<String, i32>,
 }
 
-pub fn eval(node: &Node) -> i32 {
+pub fn interpret(ast: Vec<Node>) -> () {
+    let mut scope = Scope { variables: std::collections::HashMap::new() };
+    ast.iter().map(|node| eval(node, &mut scope)).for_each(|result| println!("Result: {}", result));
+}
+
+pub fn eval(node: &Node, scope: &mut Scope) -> i32 {
     match node {
         Node::Int(value) => *value,
+        Node::Assignment { name, value } => {
+            let result = eval(value, scope);
+            scope.variables.insert(name.clone(), result);
+            result
+        }
         Node::UnaryExpr { prefix, operand } => {
-            let value = eval(operand);
+            let value = eval(operand,scope);
             match prefix {
                 Prefix::Plus => value,
                 Prefix::Minus => -value,
             }
         }
         Node::BinaryExpr { operator, left, right } => {
-            let left_value = eval(left);
-            let right_value = eval(right);
+            let left_value = eval(left,scope);
+            let right_value = eval(right,scope);
             match operator {
                 Operator::Plus => left_value + right_value,
                 Operator::Minus => left_value - right_value,
