@@ -30,6 +30,7 @@ pub enum ComparisonOperator {
 #[derive(Debug)]
 pub enum Node {
     Int(i32),
+    Bool(bool),
     Variable(String),
     Assignment {
         name: String,
@@ -98,6 +99,7 @@ fn expr_to_ast(pair: pest::iterators::Pair<Rule>) -> Node {
         Rule::UnaryExpr => unary_expr_to_ast(pair),
         Rule::Primary => primary_to_ast(pair),
         Rule::Int => int_to_ast(pair),
+        Rule::Bool => bool_to_ast(pair),
         unknown => panic!("Unknown expression: {:?}", unknown),
     }
 }
@@ -195,12 +197,14 @@ fn primary_to_ast(pair: pest::iterators::Pair<Rule>) -> Node {
             let first = pair.into_inner().next().unwrap();
             match first.as_rule() {
                 Rule::Int => int_to_ast(first),
+                Rule::Bool => bool_to_ast(first),
                 Rule::Identifier => Node::Variable(first.as_str().to_owned()),
                 Rule::Expr => expr_to_ast(first),
                 unknown => panic!("Unknown primary: {:?}", unknown),
             }
         }
         Rule::Int => int_to_ast(pair),
+        Rule::Bool => bool_to_ast(pair),
         Rule::Expr => expr_to_ast(pair),
         unknown => panic!("Unknown primary: {:?}", unknown),
     }
@@ -247,6 +251,10 @@ fn int_to_ast(pair: pest::iterators::Pair<Rule>) -> Node {
     Node::Int(int)
 }
 
+fn bool_to_ast(pair: pest::iterators::Pair<Rule>) -> Node {
+    Node::Bool(pair.as_str() == "true")
+}
+
 pub fn print_ast(ast: &[Node]) {
     println!("AST");
     for (index, node) in ast.iter().enumerate() {
@@ -258,6 +266,7 @@ fn print_node(node: &Node, node_prefix: &str, is_last: bool) {
     let branch = if is_last { "\\-- " } else { "|-- " };
     match node {
         Node::Int(value) => println!("{node_prefix}{branch}Int({value})"),
+        Node::Bool(value) => println!("{node_prefix}{branch}Bool({value})"),
         Node::Variable(name) => println!("{node_prefix}{branch}Variable({name})"),
         Node::Assignment { name, value } => {
             println!("{node_prefix}{branch}Assignment({name})");

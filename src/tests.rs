@@ -151,6 +151,11 @@ fn comparison_result_can_be_assigned_to_a_variable() {
 }
 
 #[test]
+fn boolean_literal_can_be_assigned_to_a_variable() {
+    assert_eq!(eval_program("let enabled=true; enabled; let disabled=false; disabled"), [1, 1, 0, 0]);
+}
+
+#[test]
 fn conditional_executes_the_matching_block_with_or_without_else() {
     let with_else = eval_program(
         "let a=3; if (a<10) { let result=7; result; } else { 4; }",

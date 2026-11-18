@@ -95,6 +95,7 @@ fn eval<'ctx>(
 ) -> IntValue<'ctx> {
     match node {
         Node::Int(value) => i32_type.const_int(*value as u64, true),
+        Node::Bool(value) => i32_type.const_int(u64::from(*value), false),
         Node::Variable(name) => {
             let pointer = variable_pointer(module, i32_type, variables, name);
             builder

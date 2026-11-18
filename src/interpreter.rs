@@ -15,6 +15,7 @@ pub fn interpret(ast: Vec<Node>) -> () {
 pub fn eval(node: &Node, scope: &mut Scope) -> i32 {
     match node {
         Node::Int(value) => *value,
+        Node::Bool(value) => i32::from(*value),
         Node::Variable(name) => *scope
             .variables
             .get(name)

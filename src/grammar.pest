@@ -14,7 +14,7 @@ Comparison = { Additive ~ (CompOp ~ Additive)* }
 Additive = { Multiplicative ~ ((AddOperator ~ Multiplicative)*) }
 Multiplicative = { UnaryExpr ~ ((MulOperator ~ UnaryExpr)*) }
 UnaryExpr = { Prefix? ~ Primary }
-Primary = { Int | Identifier | "(" ~ Expr ~ ")" }
+Primary = { Int | Bool | Identifier | "(" ~ Expr ~ ")" }
 
 
 // ******** Basic Types ***********
