@@ -1,5 +1,6 @@
-let a=20;
-if (!a<10) {
+let a=-10;
+!a;
+if ( (!a)==10) {
     let b=2;
 } else {
     let b=4;
