@@ -13,6 +13,7 @@ pub enum Operator {
 pub enum Prefix {
     Plus,
     Minus,
+    Not,
 }
 
 #[derive(Debug)]
@@ -211,19 +212,18 @@ fn primary_to_ast(pair: pest::iterators::Pair<Rule>) -> Node {
 }
 
 fn unary_expr_to_ast(pair: pest::iterators::Pair<Rule>) -> Node {
-    let rule = pair.as_rule();
     let mut inner = pair.into_inner();
+    let first = inner.next().unwrap();
 
-    match rule {
-        Rule::Prefix => {
-            let prefix = prefix_to_ast(inner.next().unwrap());
-            let operand = primary_to_ast(inner.next().unwrap());
-            Node::UnaryExpr {
-                prefix,
-                operand: Box::new(operand),
-            }
+    if first.as_rule() == Rule::Prefix {
+        let prefix = prefix_to_ast(first);
+        let operand = primary_to_ast(inner.next().unwrap());
+        Node::UnaryExpr {
+            prefix,
+            operand: Box::new(operand),
         }
-        _ => primary_to_ast(inner.next().unwrap()),
+    } else {
+        primary_to_ast(first)
     }
 }
 
@@ -242,6 +242,7 @@ fn prefix_to_ast(pair: pest::iterators::Pair<Rule>) -> Prefix {
     match pair.as_str() {
         "+" => Prefix::Plus,
         "-" => Prefix::Minus,
+        "!" => Prefix::Not,
         unknown => panic!("Unknown prefix: {unknown}"),
     }
 }
@@ -346,6 +347,7 @@ fn prefix_name(prefix: &Prefix) -> &'static str {
     match prefix {
         Prefix::Plus => "+",
         Prefix::Minus => "-",
+        Prefix::Not => "!",
     }
 }
 

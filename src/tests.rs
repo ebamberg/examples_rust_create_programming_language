@@ -167,6 +167,44 @@ fn conditional_executes_the_matching_block_with_or_without_else() {
 }
 
 #[test]
+fn conditional_compares_boolean_variables_with_true() {
+    let equal_true = eval_program(
+        "let a=true;\nif (a==true) {\n    let b=2;\n} else {\n    let b=4;\n};\nb;",
+    );
+    let not_equal_true = eval_program(
+        "let a=true;\nif (a!=true) {\n    let b=2;\n} else {\n    let b=4;\n};\nb;",
+    );
+
+    assert_eq!(equal_true, [1, 2, 2]);
+    assert_eq!(not_equal_true, [1, 4, 4]);
+}
+
+#[test]
+fn conditional_accepts_truthy_and_negated_variables() {
+    let truthy = eval_program("let a=true; if (a) { 2; } else { 4; }");
+    let negated_false = eval_program("let a=false; if (!a) { 2; } else { 4; }");
+
+    assert_eq!(truthy, [1, 2]);
+    assert_eq!(negated_false, [0, 2]);
+}
+
+#[test]
+fn conditional_compares_negated_variable_to_integer() {
+    let source = "let a=20;\nif (!a<10) {\n    let b=2;\n} else {\n    let b=4;\n};\nb;";
+    let interpreter_results = eval_program(source);
+
+    let parsed = parse_source(source).expect("program should parse");
+    let ast = from_parsed_pairs(parsed).expect("program should convert to an AST");
+    let expression_count = ast.len();
+    let context = compiler::new_compiler_context();
+    let module = compiler::compile(&context, ast);
+    let jit_results = compiler::execute_jit(module, expression_count);
+
+    assert_eq!(interpreter_results, [20, 2, 2]);
+    assert_eq!(jit_results, [20, 2, 2]);
+}
+
+#[test]
 fn jit_evaluates_comparison_assignment() {
     let parsed = parse_source("let a=3; let below=a<10; below")
         .expect("program should parse");
@@ -188,6 +226,18 @@ fn jit_executes_conditional_block() {
     let module = compiler::compile(&context, ast);
 
     assert_eq!(compiler::execute_jit(module, expression_count), [3, 7]);
+}
+
+#[test]
+fn jit_executes_truthy_and_negated_conditions() {
+    let parsed = parse_source("let a=false; if (!a) { 2; } else { 4; }")
+        .expect("program should parse");
+    let ast = from_parsed_pairs(parsed).expect("program should convert to an AST");
+    let expression_count = ast.len();
+    let context = compiler::new_compiler_context();
+    let module = compiler::compile(&context, ast);
+
+    assert_eq!(compiler::execute_jit(module, expression_count), [0, 2]);
 }
 
 #[test]

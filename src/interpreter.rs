@@ -30,6 +30,7 @@ pub fn eval(node: &Node, scope: &mut Scope) -> i32 {
             match prefix {
                 Prefix::Plus => value,
                 Prefix::Minus => -value,
+                Prefix::Not => i32::from(value == 0),
             }
         }
         Node::BinaryExpr { operator, left, right } => {

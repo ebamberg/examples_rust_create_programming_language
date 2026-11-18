@@ -114,6 +114,19 @@ fn eval<'ctx>(
             match prefix {
                 Prefix::Plus => value,
                 Prefix::Minus => value.const_neg(),
+                Prefix::Not => {
+                    let is_false = builder
+                        .build_int_compare(
+                            IntPredicate::EQ,
+                            value,
+                            i32_type.const_zero(),
+                            "logical_not",
+                        )
+                        .unwrap();
+                    builder
+                        .build_int_z_extend(is_false, i32_type, "logical_not_result")
+                        .unwrap()
+                }
             }
         }
         Node::BinaryExpr { operator, left, right } => {

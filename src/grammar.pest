@@ -48,7 +48,7 @@ Block = { "{" ~ (Stmt ~ (";" ~ Stmt)* ~ ";"?)? ~ "}" }
 
 AddOperator = { "+" | "-" }
 MulOperator = { "*" | "/" }
-Prefix = { "+" | "-" }
+Prefix = { "+" | "-" | "!" }
 
 
 
