@@ -57,6 +57,7 @@ mod tests {
             "1",
             &[
                 (Rule::Expr, "1"),
+                (Rule::Comparison, "1"),
                 (Rule::Additive, "1"),
                 (Rule::Multiplicative, "1"),
                 (Rule::UnaryExpr, "1"),
@@ -94,6 +95,7 @@ mod tests {
             "+1",
             &[
                 (Rule::Expr, "+1"),
+                (Rule::Comparison, "+1"),
                 (Rule::Additive, "+1"),
                 (Rule::Multiplicative, "+1"),
                 (Rule::UnaryExpr, "+1"),
@@ -110,6 +112,7 @@ mod tests {
             "2-1",
             &[
                 (Rule::Expr, "2-1"),
+                (Rule::Comparison, "2-1"),
                 (Rule::Additive, "2-1"),
                 (Rule::Multiplicative, "2"),
                 (Rule::UnaryExpr, "2"),
@@ -130,6 +133,7 @@ mod tests {
             "-1+2",
             &[
                 (Rule::Expr, "-1+2"),
+                (Rule::Comparison, "-1+2"),
                 (Rule::Additive, "-1+2"),
                 (Rule::Multiplicative, "-1"),
                 (Rule::UnaryExpr, "-1"),
@@ -151,6 +155,7 @@ mod tests {
             "-1+2+4-7",
             &[
                 (Rule::Expr, "-1+2+4-7"),
+                (Rule::Comparison, "-1+2+4-7"),
                 (Rule::Additive, "-1+2+4-7"),
                 (Rule::Multiplicative, "-1"),
                 (Rule::UnaryExpr, "-1"),

@@ -1,4 +1,4 @@
-use crate::ast::{Node,Operator,Prefix};
+use crate::ast::{ComparisonOperator, Node, Operator, Prefix};
 
 use inkwell::execution_engine::JitFunction;
 use inkwell::module::Module;
@@ -7,6 +7,7 @@ use inkwell::values::IntValue;
 use inkwell::values::PointerValue;
 use inkwell::types::IntType;
 use inkwell::builder::Builder;
+use inkwell::IntPredicate;
 use std::collections::HashMap;
 
 
@@ -124,7 +125,77 @@ fn eval<'ctx>(
                 Operator::Divide => builder.build_int_signed_div(left_value, right_value, "div_result").unwrap(),
             }
         }
+        Node::ComparisonExpr { operator, left, right } => {
+            let left_value = eval(builder, i32_type, left, module, variables);
+            let right_value = eval(builder, i32_type, right, module, variables);
+            let predicate = match operator {
+                ComparisonOperator::LessThan => IntPredicate::SLT,
+                ComparisonOperator::LessThanOrEqual => IntPredicate::SLE,
+                ComparisonOperator::GreaterThan => IntPredicate::SGT,
+                ComparisonOperator::GreaterThanOrEqual => IntPredicate::SGE,
+                ComparisonOperator::Equal => IntPredicate::EQ,
+                ComparisonOperator::NotEqual => IntPredicate::NE,
+            };
+            let comparison = builder
+                .build_int_compare(predicate, left_value, right_value, "comparison")
+                .unwrap();
+            builder
+                .build_int_z_extend(comparison, i32_type, "comparison_result")
+                .unwrap()
+        }
+        Node::Conditional {
+            condition,
+            then_branch,
+            else_branch,
+        } => {
+            let condition_value = eval(builder, i32_type, condition, module, variables);
+            let condition = builder
+                .build_int_compare(
+                    IntPredicate::NE,
+                    condition_value,
+                    i32_type.const_zero(),
+                    "if_condition",
+                )
+                .unwrap();
+            let function = builder.get_insert_block().unwrap().get_parent().unwrap();
+            let then_block = module.get_context().append_basic_block(function, "if_then");
+            let else_block = module.get_context().append_basic_block(function, "if_else");
+            let merge_block = module.get_context().append_basic_block(function, "if_merge");
+            builder
+                .build_conditional_branch(condition, then_block, else_block)
+                .unwrap();
+
+            builder.position_at_end(then_block);
+            let then_value = eval_block(builder, i32_type, then_branch, module, variables);
+            let then_exit = builder.get_insert_block().unwrap();
+            builder.build_unconditional_branch(merge_block).unwrap();
+
+            builder.position_at_end(else_block);
+            let else_value = else_branch
+                .as_ref()
+                .map(|nodes| eval_block(builder, i32_type, nodes, module, variables))
+                .unwrap_or_else(|| i32_type.const_zero());
+            let else_exit = builder.get_insert_block().unwrap();
+            builder.build_unconditional_branch(merge_block).unwrap();
+
+            builder.position_at_end(merge_block);
+            let result = builder.build_phi(i32_type, "if_result").unwrap();
+            result.add_incoming(&[(&then_value, then_exit), (&else_value, else_exit)]);
+            result.as_basic_value().into_int_value()
+        }
     }
+}
+
+fn eval_block<'ctx>(
+    builder: &Builder<'ctx>,
+    i32_type: IntType<'ctx>,
+    nodes: &[Node],
+    module: &Module<'ctx>,
+    variables: &mut HashMap<String, PointerValue<'ctx>>,
+) -> IntValue<'ctx> {
+    nodes.iter().fold(i32_type.const_zero(), |_, node| {
+        eval(builder, i32_type, node, module, variables)
+    })
 }
 
 fn variable_pointer<'ctx>(

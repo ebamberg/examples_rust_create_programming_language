@@ -15,6 +15,16 @@ pub enum Prefix {
     Minus,
 }
 
+#[derive(Debug)]
+pub enum ComparisonOperator {
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
+    Equal,
+    NotEqual,
+}
+
 
 
 #[derive(Debug)]
@@ -34,6 +44,16 @@ pub enum Node {
         left: Box<Node>,
         right: Box<Node>,
     },
+    ComparisonExpr {
+        operator: ComparisonOperator,
+        left: Box<Node>,
+        right: Box<Node>,
+    },
+    Conditional {
+        condition: Box<Node>,
+        then_branch: Vec<Node>,
+        else_branch: Option<Vec<Node>>,
+    },
 }
 
 pub fn from_parsed_pairs(pairs: pest::iterators::Pairs<Rule>) -> Result<Vec<Node>, Error<Rule>> {
@@ -43,6 +63,7 @@ pub fn from_parsed_pairs(pairs: pest::iterators::Pairs<Rule>) -> Result<Vec<Node
         match pair.as_rule() {
             Rule::Expr => ast.push(expr_to_ast(pair)),
             Rule::Assignment => ast.push(assignment_to_ast(pair)),
+            Rule::Conditional => ast.push(conditional_to_ast(pair)),
             Rule::EOI => {}
             rule => {
                 return Err(Error::new_from_span(
@@ -71,6 +92,7 @@ fn assignment_to_ast(pair: pest::iterators::Pair<Rule>) -> Node {
 fn expr_to_ast(pair: pest::iterators::Pair<Rule>) -> Node {
     match pair.as_rule() {
         Rule::Expr => expr_to_ast(pair.into_inner().next().unwrap()),
+        Rule::Comparison => comparison_to_ast(pair),
         Rule::Additive => additive_to_ast(pair),
         Rule::Multiplicative => multiplicative_to_ast(pair),
         Rule::UnaryExpr => unary_expr_to_ast(pair),
@@ -78,6 +100,59 @@ fn expr_to_ast(pair: pest::iterators::Pair<Rule>) -> Node {
         Rule::Int => int_to_ast(pair),
         unknown => panic!("Unknown expression: {:?}", unknown),
     }
+}
+
+fn comparison_to_ast(pair: pest::iterators::Pair<Rule>) -> Node {
+    let mut inner = pair.into_inner();
+    let mut left = additive_to_ast(inner.next().unwrap());
+
+    while let Some(operator_pair) = inner.next() {
+        let operator = comparison_operator_to_ast(operator_pair);
+        let right = additive_to_ast(inner.next().unwrap());
+        left = Node::ComparisonExpr {
+            operator,
+            left: Box::new(left),
+            right: Box::new(right),
+        };
+    }
+
+    left
+}
+
+fn comparison_operator_to_ast(pair: pest::iterators::Pair<Rule>) -> ComparisonOperator {
+    match pair.as_str() {
+        "<" => ComparisonOperator::LessThan,
+        "<=" => ComparisonOperator::LessThanOrEqual,
+        ">" => ComparisonOperator::GreaterThan,
+        ">=" => ComparisonOperator::GreaterThanOrEqual,
+        "==" => ComparisonOperator::Equal,
+        "!=" => ComparisonOperator::NotEqual,
+        unknown => panic!("Unknown comparison operator: {unknown}"),
+    }
+}
+
+fn conditional_to_ast(pair: pest::iterators::Pair<Rule>) -> Node {
+    let mut inner = pair.into_inner();
+    let condition = expr_to_ast(inner.next().unwrap());
+    let then_branch = block_to_ast(inner.next().unwrap());
+    let else_branch = inner.next().map(block_to_ast);
+
+    Node::Conditional {
+        condition: Box::new(condition),
+        then_branch,
+        else_branch,
+    }
+}
+
+fn block_to_ast(pair: pest::iterators::Pair<Rule>) -> Vec<Node> {
+    pair.into_inner()
+        .map(|pair| match pair.as_rule() {
+            Rule::Expr => expr_to_ast(pair),
+            Rule::Assignment => assignment_to_ast(pair),
+            Rule::Conditional => conditional_to_ast(pair),
+            rule => panic!("Unexpected statement in block: {rule:?}"),
+        })
+        .collect()
 }
 
 fn additive_to_ast(pair: pest::iterators::Pair<Rule>) -> Node {
@@ -208,6 +283,33 @@ fn print_node(node: &Node, node_prefix: &str, is_last: bool) {
             let right_prefix = format!("{child_prefix}    ");
             print_node(right, &right_prefix, true);
         }
+        Node::ComparisonExpr {
+            operator,
+            left,
+            right,
+        } => {
+            println!("{node_prefix}{branch}ComparisonExpr({})", comparison_operator_name(operator));
+            let child_prefix = format!("{node_prefix}{}   ", if is_last { "    " } else { "|" });
+            print_node(left, &format!("{child_prefix}|   "), true);
+            print_node(right, &format!("{child_prefix}    "), true);
+        }
+        Node::Conditional {
+            condition,
+            then_branch,
+            else_branch,
+        } => {
+            println!("{node_prefix}{branch}Conditional");
+            let child_prefix = format!("{node_prefix}{}   ", if is_last { "    " } else { "|" });
+            print_node(condition, &child_prefix, true);
+            for node in then_branch {
+                print_node(node, &child_prefix, true);
+            }
+            if let Some(nodes) = else_branch {
+                for node in nodes {
+                    print_node(node, &child_prefix, true);
+                }
+            }
+        }
     }
 }
 
@@ -217,6 +319,17 @@ fn operator_name(operator: &Operator) -> &'static str {
         Operator::Minus => "-",
         Operator::Divide => "/",
         Operator::Multiply => "*",
+    }
+}
+
+fn comparison_operator_name(operator: &ComparisonOperator) -> &'static str {
+    match operator {
+        ComparisonOperator::LessThan => "<",
+        ComparisonOperator::LessThanOrEqual => "<=",
+        ComparisonOperator::GreaterThan => ">",
+        ComparisonOperator::GreaterThanOrEqual => ">=",
+        ComparisonOperator::Equal => "==",
+        ComparisonOperator::NotEqual => "!=",
     }
 }
 

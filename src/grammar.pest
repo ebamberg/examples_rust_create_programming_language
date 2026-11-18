@@ -7,15 +7,14 @@
 
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
 
-Program = _{ SOI ~ Stmt ~ (";" ~ Stmt)* ~ ";"? ~ EOI }
-//    Stmt = { Function | Return | Assignment | Expr }
-    Stmt = _{ Assignment | Expr }
-        Expr = { Additive }
-            Comparison = { Additive ~ (CompOp ~ Additive)* }    // x < 10
-                Additive = { Multiplicative ~ ((AddOperator ~ Multiplicative)*) }
-                    Multiplicative = { UnaryExpr ~ ((MulOperator ~ UnaryExpr)*) }
-                UnaryExpr = { Prefix? ~ Primary }
-                Primary = { Int | Identifier | "(" ~ Expr ~ ")" }
+Program = _{ SOI ~ (Stmt ~ (";" ~ Stmt)* ~ ";"?)? ~ EOI }
+Stmt = _{ Conditional | Assignment | Expr }
+Expr = { Comparison }
+Comparison = { Additive ~ (CompOp ~ Additive)* }
+Additive = { Multiplicative ~ ((AddOperator ~ Multiplicative)*) }
+Multiplicative = { UnaryExpr ~ ((MulOperator ~ UnaryExpr)*) }
+UnaryExpr = { Prefix? ~ Primary }
+Primary = { Int | Identifier | "(" ~ Expr ~ ")" }
 
 
 // ******** Basic Types ***********
@@ -42,10 +41,10 @@ Assignment = { "let" ~ Identifier ~ "=" ~ Expr } // Example: let x = 42
 
 // ***** Control flow ********
 
-// Conditional = { "if" ~ "(" ~ Expr ~ ")" ~ Block ~ "else" ~ Block }
+Conditional = { "if" ~ "(" ~ Expr ~ ")" ~ Block ~ ("else" ~ Block)? }
 // WhileLoop = { "while" ~ "(" ~ Expr ~ ")" ~ Block }
 // Block of statements
-// Block = { "{" ~ Stmt* ~ "}" }
+Block = { "{" ~ (Stmt ~ (";" ~ Stmt)* ~ ";"?)? ~ "}" }
 
 AddOperator = { "+" | "-" }
 MulOperator = { "*" | "/" }

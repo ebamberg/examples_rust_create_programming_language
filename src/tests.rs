@@ -139,6 +139,53 @@ fn interpreter_resolves_variables_in_expressions_and_assignments() {
 }
 
 #[test]
+fn interpreter_executes_variable_assignment_program() {
+    let source = "let a=1;\nlet b=a*2;\nb;";
+
+    assert_eq!(eval_program(source), [1, 2, 2]);
+}
+
+#[test]
+fn comparison_result_can_be_assigned_to_a_variable() {
+    assert_eq!(eval_program("let a=3; let below=a<10; below"), [3, 1, 1]);
+}
+
+#[test]
+fn conditional_executes_the_matching_block_with_or_without_else() {
+    let with_else = eval_program(
+        "let a=3; if (a<10) { let result=7; result; } else { 4; }",
+    );
+    let without_else = eval_program("let a=3; if (a>10) { 8; }");
+
+    assert_eq!(with_else, [3, 7]);
+    assert_eq!(without_else, [3, 0]);
+}
+
+#[test]
+fn jit_evaluates_comparison_assignment() {
+    let parsed = parse_source("let a=3; let below=a<10; below")
+        .expect("program should parse");
+    let ast = from_parsed_pairs(parsed).expect("program should convert to an AST");
+    let expression_count = ast.len();
+    let context = compiler::new_compiler_context();
+    let module = compiler::compile(&context, ast);
+
+    assert_eq!(compiler::execute_jit(module, expression_count), [3, 1, 1]);
+}
+
+#[test]
+fn jit_executes_conditional_block() {
+    let parsed = parse_source("let a=3; if (a<10) { 7; } else { 4; }")
+        .expect("program should parse");
+    let ast = from_parsed_pairs(parsed).expect("program should convert to an AST");
+    let expression_count = ast.len();
+    let context = compiler::new_compiler_context();
+    let module = compiler::compile(&context, ast);
+
+    assert_eq!(compiler::execute_jit(module, expression_count), [3, 7]);
+}
+
+#[test]
 fn jit_resolves_variables_across_statements() {
     let parsed = parse_source("let a=3; let b=a*2; b+a").expect("program should parse");
     let ast = from_parsed_pairs(parsed).expect("program should convert to an AST");
