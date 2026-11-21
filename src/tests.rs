@@ -124,10 +124,10 @@ fn parses_assignment_into_ast() {
     let ast = from_parsed_pairs(parsed).expect("assignment should convert to an AST");
 
     assert_eq!(ast.len(), 1);
-    match &ast[0] {
-        crate::ast::Node::Assignment { name, value } => {
+    match &ast[0].expr {
+        crate::ast::Expr::Assignment { name, value } => {
             assert_eq!(name, "a");
-            assert!(matches!(value.as_ref(), crate::ast::Node::Int(1)));
+            assert!(matches!(&value.expr, crate::ast::Expr::Int(1)));
         }
         node => panic!("expected assignment node, got {node:?}"),
     }

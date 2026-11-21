@@ -1,4 +1,4 @@
-use crate::ast::{ComparisonOperator, Node, Operator, Prefix};
+use crate::ast::{ComparisonOperator, Expr, Operator, Prefix, TypedExpr};
 
 
 use std::collections::HashMap;
@@ -7,35 +7,37 @@ pub struct Scope {
     variables: HashMap<String, i32>,
 }
 
-pub fn interpret(ast: Vec<Node>) -> () {
+pub fn interpret(ast: Vec<TypedExpr>) -> () {
     let mut scope = Scope { variables: std::collections::HashMap::new() };
-    ast.iter().map(|node| eval(node, &mut scope)).for_each(|result| println!("Result: {}", result));
+    ast.iter()
+        .map(|node| eval(node, &mut scope))
+        .for_each(|result| println!("Result: {}", result));
 }
 
-pub fn eval(node: &Node, scope: &mut Scope) -> i32 {
-    match node {
-        Node::Int(value) => *value,
-        Node::Bool(value) => i32::from(*value),
-        Node::Variable(name) => *scope
+pub fn eval(node: &TypedExpr, scope: &mut Scope) -> i32 {
+    match &node.expr {
+        Expr::Int(value) => *value,
+        Expr::Bool(value) => i32::from(*value),
+        Expr::Variable(name) => *scope
             .variables
             .get(name)
             .unwrap_or_else(|| panic!("Undefined variable: {name}")),
-        Node::Assignment { name, value } => {
+        Expr::Assignment { name, value } => {
             let result = eval(value, scope);
             scope.variables.insert(name.clone(), result);
             result
         }
-        Node::UnaryExpr { prefix, operand } => {
-            let value = eval(operand,scope);
+        Expr::UnaryExpr { prefix, operand } => {
+            let value = eval(operand, scope);
             match prefix {
                 Prefix::Plus => value,
                 Prefix::Minus => -value,
                 Prefix::Not => i32::from(value == 0),
             }
         }
-        Node::BinaryExpr { operator, left, right } => {
-            let left_value = eval(left,scope);
-            let right_value = eval(right,scope);
+        Expr::BinaryExpr { operator, left, right } => {
+            let left_value = eval(left, scope);
+            let right_value = eval(right, scope);
             match operator {
                 Operator::Plus => left_value + right_value,
                 Operator::Minus => left_value - right_value,
@@ -43,7 +45,7 @@ pub fn eval(node: &Node, scope: &mut Scope) -> i32 {
                 Operator::Multiply => left_value * right_value,
             }
         }
-        Node::ComparisonExpr { operator, left, right } => {
+        Expr::ComparisonExpr { operator, left, right } => {
             let left_value = eval(left, scope);
             let right_value = eval(right, scope);
             i32::from(match operator {
@@ -55,7 +57,7 @@ pub fn eval(node: &Node, scope: &mut Scope) -> i32 {
                 ComparisonOperator::NotEqual => left_value != right_value,
             })
         }
-        Node::Conditional {
+        Expr::Conditional {
             condition,
             then_branch,
             else_branch,

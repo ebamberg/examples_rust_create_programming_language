@@ -11,6 +11,8 @@ use compiler::{compile, execute_jit, print_intermediate_code};
 use parser::parse_source;
 use std::{env, error::Error, ffi::OsString, fs, io, path::PathBuf};
 
+const USE_COMPILER: bool = false;
+
 fn main() -> Result<(), Box<dyn Error>> {
     println!("Simple Calculator parsing example!");
 
@@ -19,13 +21,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     let ast_tree = from_parsed_pairs(parsed_source).expect("AST conversion failed");
     print_ast(&ast_tree);
     println!("{:#?}", ast_tree);
-    interpreter::interpret(ast_tree);
- //   let expression_count = ast_tree.len();
- //   let compiler_context = compiler::new_compiler_context();
- //   let module = compile(&compiler_context, ast_tree);
- //   print_intermediate_code(&module);
- //   execute_jit(module, expression_count);
-
+    if (!USE_COMPILER) {
+        interpreter::interpret(ast_tree);
+    } else {
+        let expression_count = ast_tree.len();
+        let compiler_context = compiler::new_compiler_context();
+        let module = compile(&compiler_context, ast_tree);
+        print_intermediate_code(&module);
+        execute_jit(module, expression_count);
+    }
     Ok(())
 }
 

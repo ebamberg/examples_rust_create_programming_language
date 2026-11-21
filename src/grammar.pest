@@ -1,3 +1,8 @@
+/*
+ * This is the grammar file used by PEST.
+ * Author: Erik Bamberg
+ * Initial commit: 2026-10-19
+ */
 
 // ~ followed by
 // | or
@@ -14,32 +19,45 @@ Comparison = { Additive ~ (CompOp ~ Additive)* }
 Additive = { Multiplicative ~ ((AddOperator ~ Multiplicative)*) }
 Multiplicative = { UnaryExpr ~ ((MulOperator ~ UnaryExpr)*) }
 UnaryExpr = { Prefix? ~ Primary }
-Primary = { Int | Bool | Identifier | "(" ~ Expr ~ ")" }
+Primary = { Literal | Identifier | "(" ~ Expr ~ ")" }
 
 
-// ******** Basic Types ***********
+/* ----------------------------------------------------------------
+ *                              TYPES
+ * ---------------------------------------------------------------- */
+Literal = _{ Bool | Int }
 Int = @{ ASCII_DIGIT+ }
-Bool = @{ "true" | "false" }   
+Bool = { "true" | "false" }
+
+Type = { IntTypeIdent | BoolTypeIdent }
+IntTypeIdent = { "int" }
+BoolTypeIdent = { "bool" }
 
 
-// Keywords
+/* ----------------------------------------------------------------
+ *                             KEYWORDS
+ * ---------------------------------------------------------------- */
 KEYWORD = @{ "let" | "fn" | "if" | "else" | "while" | "true" | "false" | "return" }
 CompOp = { "<=" | ">=" | "<" | ">" | "==" | "!=" }
 
 
-// ******* Functions and Variables *************
+/* ----------------------------------------------------------------
+ *                      FUNCTIONS AND VARIABLES
+ * ---------------------------------------------------------------- */
 Identifier = @{ !KEYWORD ~ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
 
 // Function = { "fn" ~ Identifier ~ "(" ~ Params? ~ ")" ~ Block }  // Example: fn add(a, b) { return a + b }
 
 // Variable assignment
-Assignment = { "let" ~ Identifier ~ "=" ~ Expr } // Example: let x = 42
+Assignment = { "let" ~ Identifier ~ (":" ~ Type)? ~ "=" ~ Expr } // Example: let x = 42
 
 // Return statement
 // Return = { "return" ~ Expr } // Example: return x + 1
 
 
-// ***** Control flow ********
+/* ----------------------------------------------------------------
+ *                           CONTROL FLOW
+ * ---------------------------------------------------------------- */
 
 Conditional = { "if" ~ "(" ~ Expr ~ ")" ~ Block ~ ("else" ~ Block)? }
 // WhileLoop = { "while" ~ "(" ~ Expr ~ ")" ~ Block }

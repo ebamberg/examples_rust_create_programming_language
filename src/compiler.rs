@@ -1,4 +1,4 @@
-use crate::ast::{ComparisonOperator, Node, Operator, Prefix};
+use crate::ast::{ComparisonOperator, Expr, Operator, Prefix, TypedExpr};
 
 use inkwell::execution_engine::JitFunction;
 use inkwell::module::Module;
@@ -20,7 +20,7 @@ pub fn new_compiler_context() -> Context {
 }
 
 // <'ctx> is a lifetime parameter , Context and Module are generic over this lifetime, meaning they can hold references that live at least as long as 'ctx. This is important for ensuring that the LLVM context and module are valid for the duration of their use in the compilation process.
-pub fn compile<'ctx>(context: &'ctx Context, ast: Vec<Node>) -> Module<'ctx> {
+pub fn compile<'ctx>(context: &'ctx Context, ast: Vec<TypedExpr>) -> Module<'ctx> {
     // Placeholder for compilation logic
     println!("Compiling AST...");
 
@@ -89,27 +89,27 @@ pub fn execute_jit(module: inkwell::module::Module, expression_count: usize) -> 
 fn eval<'ctx>(
     builder: &Builder<'ctx>,
     i32_type: IntType<'ctx>,
-    node: &Node,
+    node: &TypedExpr,
     module: &Module<'ctx>,
     variables: &mut HashMap<String, PointerValue<'ctx>>,
 ) -> IntValue<'ctx> {
-    match node {
-        Node::Int(value) => i32_type.const_int(*value as u64, true),
-        Node::Bool(value) => i32_type.const_int(u64::from(*value), false),
-        Node::Variable(name) => {
+    match &node.expr {
+        Expr::Int(value) => i32_type.const_int(*value as u64, true),
+        Expr::Bool(value) => i32_type.const_int(u64::from(*value), false),
+        Expr::Variable(name) => {
             let pointer = variable_pointer(module, i32_type, variables, name);
             builder
                 .build_load(i32_type, pointer, "load_variable")
                 .unwrap()
                 .into_int_value()
         }
-        Node::Assignment { name, value } => {
+        Expr::Assignment { name, value } => {
             let result = eval(builder, i32_type, value, module, variables);
             let pointer = variable_pointer(module, i32_type, variables, name);
             builder.build_store(pointer, result).unwrap();
             result
         }
-        Node::UnaryExpr { prefix, operand } => {
+        Expr::UnaryExpr { prefix, operand } => {
             let value = eval(builder, i32_type, operand, module, variables);
             match prefix {
                 Prefix::Plus => value,
@@ -129,7 +129,7 @@ fn eval<'ctx>(
                 }
             }
         }
-        Node::BinaryExpr { operator, left, right } => {
+        Expr::BinaryExpr { operator, left, right } => {
             let left_value = eval(builder, i32_type, left, module, variables);
             let right_value = eval(builder, i32_type, right, module, variables);
             match operator {
@@ -139,7 +139,7 @@ fn eval<'ctx>(
                 Operator::Divide => builder.build_int_signed_div(left_value, right_value, "div_result").unwrap(),
             }
         }
-        Node::ComparisonExpr { operator, left, right } => {
+        Expr::ComparisonExpr { operator, left, right } => {
             let left_value = eval(builder, i32_type, left, module, variables);
             let right_value = eval(builder, i32_type, right, module, variables);
             let predicate = match operator {
@@ -157,7 +157,7 @@ fn eval<'ctx>(
                 .build_int_z_extend(comparison, i32_type, "comparison_result")
                 .unwrap()
         }
-        Node::Conditional {
+        Expr::Conditional {
             condition,
             then_branch,
             else_branch,
@@ -203,7 +203,7 @@ fn eval<'ctx>(
 fn eval_block<'ctx>(
     builder: &Builder<'ctx>,
     i32_type: IntType<'ctx>,
-    nodes: &[Node],
+    nodes: &[TypedExpr],
     module: &Module<'ctx>,
     variables: &mut HashMap<String, PointerValue<'ctx>>,
 ) -> IntValue<'ctx> {
