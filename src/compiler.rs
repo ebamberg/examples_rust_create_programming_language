@@ -109,7 +109,7 @@ fn eval<'ctx>(
             builder.build_store(pointer, result).unwrap();
             result
         }
-        Expr::UnaryExpr { prefix, operand } => {
+        Expr::Unary { prefix, operand } => {
             let value = eval(builder, i32_type, operand, module, variables);
             match prefix {
                 Prefix::Plus => value,
@@ -129,7 +129,7 @@ fn eval<'ctx>(
                 }
             }
         }
-        Expr::BinaryExpr { operator, left, right } => {
+        Expr::Binary { operator, left, right } => {
             let left_value = eval(builder, i32_type, left, module, variables);
             let right_value = eval(builder, i32_type, right, module, variables);
             match operator {
@@ -139,7 +139,7 @@ fn eval<'ctx>(
                 Operator::Divide => builder.build_int_signed_div(left_value, right_value, "div_result").unwrap(),
             }
         }
-        Expr::ComparisonExpr { operator, left, right } => {
+        Expr::Comparison { operator, left, right } => {
             let left_value = eval(builder, i32_type, left, module, variables);
             let right_value = eval(builder, i32_type, right, module, variables);
             let predicate = match operator {

@@ -252,3 +252,67 @@ fn jit_resolves_variables_across_statements() {
 
     assert_eq!(results, [3, 6, 9]);
 }
+
+#[test]
+fn parsed_integer_and_boolean_expressions_have_concrete_types() {
+    let integer = parse_source("42").expect("integer should parse");
+    let integer_ast = from_parsed_pairs(integer).expect("integer AST should be created");
+
+    assert_eq!(integer_ast.len(), 1);
+    assert!(matches!(integer_ast[0].ty, crate::ast::Type::Int));
+    assert!(matches!(integer_ast[0].expr, crate::ast::Expr::Int(42)));
+
+    let boolean = parse_source("true").expect("boolean should parse");
+    let boolean_ast = from_parsed_pairs(boolean).expect("boolean AST should be created");
+
+    assert_eq!(boolean_ast.len(), 1);
+    assert!(matches!(boolean_ast[0].ty, crate::ast::Type::Bool));
+    assert!(matches!(boolean_ast[0].expr, crate::ast::Expr::Bool(true)));
+}
+
+#[test]
+fn parsed_composite_expressions_are_unknown() {
+    let parsed = parse_source("1+2").expect("binary expression should parse");
+    let ast = from_parsed_pairs(parsed).expect("binary expression AST should be created");
+
+    assert_eq!(ast.len(), 1);
+    assert!(matches!(ast[0].ty, crate::ast::Type::Unknown));
+
+    match &ast[0].expr {
+        crate::ast::Expr::Binary { left, right, .. } => {
+            assert!(matches!(left.ty, crate::ast::Type::Int));
+            assert!(matches!(right.ty, crate::ast::Type::Int));
+        }
+        expr => panic!("expected binary expression, got {expr:?}"),
+    }
+}
+
+#[test]
+fn parsed_assignment_and_variable_expressions_are_unknown() {
+    let assignment = parse_source("let a=1")
+        .expect("assignment should parse");
+    let assignment_ast = from_parsed_pairs(assignment)
+        .expect("assignment AST should be created");
+
+    assert_eq!(assignment_ast.len(), 1);
+    assert!(matches!(assignment_ast[0].ty, crate::ast::Type::Unknown));
+
+    match &assignment_ast[0].expr {
+        crate::ast::Expr::Assignment { value, .. } => {
+            assert!(matches!(value.ty, crate::ast::Type::Int));
+            assert!(matches!(value.expr, crate::ast::Expr::Int(1)));
+        }
+        expr => panic!("expected assignment expression, got {expr:?}"),
+    }
+
+    let variable = parse_source("a").expect("variable should parse");
+    let variable_ast = from_parsed_pairs(variable)
+        .expect("variable AST should be created");
+
+    assert_eq!(variable_ast.len(), 1);
+    assert!(matches!(variable_ast[0].ty, crate::ast::Type::Unknown));
+    assert!(matches!(
+        variable_ast[0].expr,
+        crate::ast::Expr::Variable(ref name) if name == "a"
+    ));
+}

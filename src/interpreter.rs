@@ -27,7 +27,7 @@ pub fn eval(node: &TypedExpr, scope: &mut Scope) -> i32 {
             scope.variables.insert(name.clone(), result);
             result
         }
-        Expr::UnaryExpr { prefix, operand } => {
+        Expr::Unary { prefix, operand } => {
             let value = eval(operand, scope);
             match prefix {
                 Prefix::Plus => value,
@@ -35,7 +35,7 @@ pub fn eval(node: &TypedExpr, scope: &mut Scope) -> i32 {
                 Prefix::Not => i32::from(value == 0),
             }
         }
-        Expr::BinaryExpr { operator, left, right } => {
+        Expr::Binary { operator, left, right } => {
             let left_value = eval(left, scope);
             let right_value = eval(right, scope);
             match operator {
@@ -45,7 +45,7 @@ pub fn eval(node: &TypedExpr, scope: &mut Scope) -> i32 {
                 Operator::Multiply => left_value * right_value,
             }
         }
-        Expr::ComparisonExpr { operator, left, right } => {
+        Expr::Comparison { operator, left, right } => {
             let left_value = eval(left, scope);
             let right_value = eval(right, scope);
             i32::from(match operator {

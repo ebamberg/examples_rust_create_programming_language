@@ -64,16 +64,16 @@ pub enum Expr {
         name: String,
         value: Box<TypedExpr>,
     },
-    UnaryExpr {
+    Unary {
         prefix: Prefix,
         operand: Box<TypedExpr>,
     },
-    BinaryExpr {
+    Binary {
         operator: Operator,
         left: Box<TypedExpr>,
         right: Box<TypedExpr>,
     },
-    ComparisonExpr {
+    Comparison {
         operator: ComparisonOperator,
         left: Box<TypedExpr>,
         right: Box<TypedExpr>,
@@ -139,7 +139,7 @@ fn comparison_to_ast(pair: pest::iterators::Pair<Rule>) -> TypedExpr {
     while let Some(operator_pair) = inner.next() {
         let operator = comparison_operator_to_ast(operator_pair);
         let right = additive_to_ast(inner.next().unwrap());
-        left = TypedExpr::unknown(Expr::ComparisonExpr {
+        left = TypedExpr::unknown(Expr::Comparison {
             operator,
             left: Box::new(left),
             right: Box::new(right),
@@ -192,7 +192,7 @@ fn additive_to_ast(pair: pest::iterators::Pair<Rule>) -> TypedExpr {
     while let Some(operator_pair) = inner.next() {
         let operator = operator_to_ast(operator_pair);
         let right = multiplicative_to_ast(inner.next().unwrap());
-        left = TypedExpr::unknown(Expr::BinaryExpr {
+        left = TypedExpr::unknown(Expr::Binary {
             operator,
             left: Box::new(left),
             right: Box::new(right),
@@ -209,7 +209,7 @@ fn multiplicative_to_ast(pair: pest::iterators::Pair<Rule>) -> TypedExpr {
     while let Some(operator_pair) = inner.next() {
         let operator = operator_to_ast(operator_pair);
         let right = unary_expr_to_ast(inner.next().unwrap());
-        left = TypedExpr::unknown(Expr::BinaryExpr {
+        left = TypedExpr::unknown(Expr::Binary {
             operator,
             left: Box::new(left),
             right: Box::new(right),
@@ -254,7 +254,7 @@ fn unary_expr_to_ast(pair: pest::iterators::Pair<Rule>) -> TypedExpr {
     if first.as_rule() == Rule::Prefix {
         let prefix = prefix_to_ast(first);
         let operand = primary_to_ast(inner.next().unwrap());
-        TypedExpr::unknown(Expr::UnaryExpr {
+        TypedExpr::unknown(Expr::Unary {
             prefix,
             operand: Box::new(operand),
         })
@@ -310,12 +310,12 @@ fn print_node(node: &TypedExpr, node_prefix: &str, is_last: bool) {
             let child_prefix = format!("{node_prefix}{}   ", if is_last { "    " } else { "|" });
             print_node(value, &child_prefix, true);
         }
-        Expr::UnaryExpr { prefix, operand } => {
+        Expr::Unary { prefix, operand } => {
             println!("{node_prefix}{branch}UnaryExpr({})", prefix_name(prefix));
             let child_prefix = format!("{node_prefix}{}   ", if is_last { "    " } else { "|" });
             print_node(operand, &child_prefix, true);
         }
-        Expr::BinaryExpr {
+        Expr::Binary {
             operator,
             left,
             right,
@@ -329,7 +329,7 @@ fn print_node(node: &TypedExpr, node_prefix: &str, is_last: bool) {
             let right_prefix = format!("{child_prefix}    ");
             print_node(right, &right_prefix, true);
         }
-        Expr::ComparisonExpr {
+        Expr::Comparison {
             operator,
             left,
             right,
